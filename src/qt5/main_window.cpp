@@ -366,6 +366,7 @@ MainWindow::MainWindow(Emulator &emulator)
 #ifdef RPCEMU_NETWORKING
 	network_dialog = new NetworkDialog(emulator, &config_copy, this);
 #endif /* RPCEMU_NETWORKING */
+	nat_list_dialog = new NatListDialog(emulator, this);
 	about_dialog = new AboutDialog(this);
 
 	// MIPS counting
@@ -386,6 +387,7 @@ MainWindow::~MainWindow()
 {
 #ifdef RPCEMU_NETWORKING
 	delete network_dialog;
+	delete nat_list_dialog;
 #endif /* RPCEMU_NETWORKING */
 	delete configure_dialog;
 	delete about_dialog;
@@ -661,7 +663,7 @@ MainWindow::menu_loaddisc0()
 	QString fileName = QFileDialog::getOpenFileName(this,
 	    tr("Open Disc Image"),
 	    "",
-	    tr("All disc images (*.adf *.adl *.img);;ADFS D/E/F Disc Image (*.adf);;ADFS L Disc Image (*.adl);;DOS Disc Image (*.img)"));
+	    tr("All disc images (*.adf *.adl *.hfe *.img);;ADFS D/E/F Disc Image (*.adf);;ADFS L Disc Image (*.adl);;DOS Disc Image (*.img);;HFE Disc Image (*.hfe)"));
 
 	/* fileName is NULL if user hit cancel */
 	if(fileName != NULL) {
@@ -675,7 +677,7 @@ MainWindow::menu_loaddisc1()
 	QString fileName = QFileDialog::getOpenFileName(this,
 	    tr("Open Disc Image"),
 	    "",
-	    tr("All disc images (*.adf *.adl *.img);;ADFS D/E/F Disc Image (*.adf);;ADFS L Disc Image (*.adl);;DOS Disc Image (*.img)"));
+	    tr("All disc images (*.adf *.adl *.hfe *.img);;ADFS D/E/F Disc Image (*.adf);;ADFS L Disc Image (*.adl);;DOS Disc Image (*.img);;HFE Disc Image (*.hfe)"));
 
 	/* fileName is NULL if user hit cancel */
 	if(fileName != NULL) {
@@ -694,6 +696,19 @@ void
 MainWindow::menu_networking()
 {
 	network_dialog->exec(); // Modal
+
+	// Update the NAT Port Forwarding Rules menu item based on choice
+	if (config_copy.network_type == NetworkType_NAT) {
+		nat_list_action->setEnabled(true);
+	} else {
+		nat_list_action->setEnabled(false);
+	}
+}
+
+void
+MainWindow::menu_nat_list()
+{
+	nat_list_dialog->exec(); // Modal
 }
 #endif /* RPCEMU_NETWORKING */
 
@@ -1062,6 +1077,8 @@ MainWindow::create_actions()
 #ifdef RPCEMU_NETWORKING
 	networking_action = new QAction(tr("Networking..."), this);
 	connect(networking_action, &QAction::triggered, this, &MainWindow::menu_networking);
+	nat_list_action = new QAction(tr("NAT Port Forwarding Rules..."), this);
+	connect(nat_list_action, &QAction::triggered, this, &MainWindow::menu_nat_list);
 #endif /* RPCEMU_NETWORKING */
 	fullscreen_action = new QAction(tr("Full-screen Mode"), this);
 	fullscreen_action->setCheckable(true);
@@ -1092,6 +1109,7 @@ MainWindow::create_actions()
 	connect(this, &MainWindow::main_display_signal, this, &MainWindow::main_display_update, Qt::BlockingQueuedConnection);
 //	connect(this, &MainWindow::main_display_signal, this, &MainWindow::main_display_update);
 	connect(this, &MainWindow::move_host_mouse_signal, this, &MainWindow::move_host_mouse);
+	connect(this, &MainWindow::send_nat_rule_to_gui_signal, this, &MainWindow::send_nat_rule_to_gui);
 
 	// Connections for displaying error messages in the GUI
 	connect(this, &MainWindow::error_signal, this, &MainWindow::error);
@@ -1136,6 +1154,10 @@ MainWindow::create_menus()
 	settings_menu->addAction(configure_action);
 #ifdef RPCEMU_NETWORKING
 	settings_menu->addAction(networking_action);
+	settings_menu->addAction(nat_list_action);
+	if (this->config_copy.network_type != NetworkType_NAT) {
+		nat_list_action->setEnabled(false);
+	}
 #endif /* RPCEMU_NETWORKING */
 	settings_menu->addSeparator();
 	settings_menu->addAction(fullscreen_action);
@@ -1284,6 +1306,12 @@ MainWindow::move_host_mouse(MouseMoveUpdate mouse_update)
 	QCursor::setPos(display->mapToGlobal(pos));
 }
 
+void
+MainWindow::send_nat_rule_to_gui(PortForwardRule rule)
+{
+	nat_list_dialog->add_nat_rule(rule);
+}
+
 /**
  * Called each time the mips_timer times out.
  *
@@ -1298,13 +1326,14 @@ MainWindow::mips_timer_timeout()
 	assert(pconfig_copy);
 
 	// Read (and zero atomically) the instruction count from the emulator core
+	// 'instruction_count' is in multiples of 65536
 	const unsigned count = (unsigned) instruction_count.fetchAndStoreRelease(0);
 
 	// Calculate MIPS
-	const double mips = (double) count / 1000000.0;
+	const double mips = (double) count * 65536.0 / 1000000.0;
 
 	// Update variables used for average
-	mips_total_instructions += (uint64_t) count;
+	mips_total_instructions += (uint64_t) count << 16;
 	mips_seconds++;
 
 	// Calculate Average

@@ -78,6 +78,9 @@
 
 #define PS2_QUEUE_SIZE 256
 
+int kcallback = 0;
+int mcallback = 0;
+
 typedef struct {
 	uint8_t	data[PS2_QUEUE_SIZE];
 	int	rptr, wptr, count;
@@ -605,7 +608,7 @@ mouse_send(uint8_t v)
  * Handle sending queued PS/2 mouse messages to the emulated machine; this is
  * to introduce a slight delay between sent packets.
  *
- * Called from within execarm() once the mcallback variable reaches 0.
+ * Called once the mcallback variable reaches 0.
  */
 void
 mouse_ps2_callback(void)
