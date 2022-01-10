@@ -129,6 +129,7 @@ static struct
         FILE *hdfile[2];
         int skip512[2];
         uint16_t buffer[65536];
+        int lba_mode;
 } ide;
 
 static inline void
@@ -287,8 +288,14 @@ ide_get_sector(void)
 	int sectors = ide.spt[ide.drive];
 	int skip = ide.skip512[ide.drive];
 
-	return ((((off64_t) ide.cylinder * heads) + ide.head) *
-	          sectors) + (ide.sector - 1) + skip;
+  if (ide.lba_mode)
+  {
+    // from ATA-3 head is bits 27:24, cyl is 23:8, sec is 7:0
+    return (off64_t)((ide.head << 24) | (ide.cylinder << 8) | ide.sector);
+  }
+  else
+                return ((((off64_t) ide.cylinder * heads) + ide.head) *
+                          sectors) + (ide.sector - 1) + skip;
 }
 
 /**
@@ -297,15 +304,23 @@ ide_get_sector(void)
 static void
 ide_next_sector(void)
 {
-	ide.sector++;
-	if (ide.sector == (ide.spt[ide.drive] + 1)) {
-		ide.sector = 1;
-		ide.head++;
-		if (ide.head == ide.hpc[ide.drive]) {
-			ide.head = 0;
-			ide.cylinder++;
-		}
-	}
+    if (ide.lba_mode) {
+     int lba = (ide.head << 24) | (ide.cylinder << 8) | ide.sector;
+     lba++;
+     ide.head = (lba >> 24) & 0xF;
+     ide.cylinder = (lba >> 8) & 0xFFFF;
+     ide.sector = (lba >> 0) & 0xFF;
+    } else {
+        ide.sector++;
+        if (ide.sector == (ide.spt[ide.drive] + 1)) {
+            ide.sector = 1;
+            ide.head++;
+            if (ide.head == ide.hpc[ide.drive]) {
+                ide.head = 0;
+                ide.cylinder++;
+            }
+        }
+    }
 }
 
 static void
@@ -340,22 +355,23 @@ loadhd(int d, const char *filename)
         ide.spt[d] = getc(ide.hdfile[d]);
         ide.hpc[d] = getc(ide.hdfile[d]);
         ide.skip512[d] = 1;
-//        rpclog("First check - spt %i hpc %i\n",ide.spt[0],ide.hpc[0]);
+        rpclog("First check - drive %i spt %i hpc %i\n",d, ide.spt[d],ide.hpc[d]);
         if (!ide.spt[d] || !ide.hpc[d])
         {
                 fseek(ide.hdfile[d], 0xdc1, SEEK_SET);
                 ide.spt[d] = getc(ide.hdfile[d]);
                 ide.hpc[d] = getc(ide.hdfile[d]);
-//                rpclog("Second check - spt %i hpc %i\n",ide.spt[0],ide.hpc[0]);
+                rpclog("Second check - drive %i spt %i hpc %i\n",d,ide.spt[d],ide.hpc[d]);
                 ide.skip512[d] = 0;
                 if (!ide.spt[d] || !ide.hpc[d])
                 {
                         ide.spt[d]=63;
                         ide.hpc[d]=16;
                         ide.skip512[d] = 1;
-//        rpclog("Final check - spt %i hpc %i\n",ide.spt[0],ide.hpc[0]);
+        rpclog("Final check - drive %i spt %i hpc %i\n",d,ide.spt[d],ide.hpc[d]);
                 }
         }
+        rpclog("HDD %i - skip %i spt %i hpc %i\n",d,ide.skip512[d],ide.spt[d],ide.hpc[d]);
 }
 
 void resetide(void)
@@ -453,6 +469,7 @@ void writeide(uint16_t addr, uint8_t val)
 
         case 0x1F6: /* Drive/Head */
                 ide.head=val&0xF;
+                ide.lba_mode = val & 0x40; //prm bit 6 is LBA addressing flag, per command
                 if (((val>>4)&1)!=ide.drive)
                 {
                         idecallback=0;
