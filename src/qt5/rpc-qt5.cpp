@@ -498,6 +498,7 @@ Emulator::Emulator()
 	connect(this, &Emulator::mouse_twobutton_signal, this, &Emulator::mouse_twobutton);
 	connect(this, &Emulator::config_updated_signal, this, &Emulator::config_updated);
 	connect(this, &Emulator::network_config_updated_signal, this, &Emulator::network_config_updated);
+	connect(this, &Emulator::show_fullscreen_message_off_signal, this, &Emulator::show_fullscreen_message_off);
 }
 
 /**
@@ -747,6 +748,10 @@ void
 Emulator::cpu_idle()
 {
 	config.cpu_idle ^= 1;
+
+	// Save the settings to the rpc.cfg file
+	config_save(&config);
+
 	resetrpc();
 }
 
@@ -758,6 +763,10 @@ Emulator::cdrom_disabled()
 {
 	if(config.cdromenabled) {
 		config.cdromenabled = 0;
+
+		// Save the settings to the rpc.cfg file
+		config_save(&config);
+
 		resetrpc();
 	}
 }
@@ -770,6 +779,10 @@ Emulator::cdrom_empty()
 {
 	if (!config.cdromenabled) {
 		config.cdromenabled = 1;
+
+		// Save the settings to the rpc.cfg file
+		config_save(&config);
+
 		resetrpc();
 	}
 
@@ -790,6 +803,10 @@ Emulator::cdrom_load_iso(QString discname)
 
 	if(!config.cdromenabled) {
 		config.cdromenabled = 1;
+
+		// Save the settings to the rpc.cfg file
+		config_save(&config);
+
 		resetrpc();
 	}
 
@@ -814,6 +831,10 @@ Emulator::cdrom_ioctl()
 {
 	if(!config.cdromenabled) {
 		config.cdromenabled = 1;
+
+		// Save the settings to the rpc.cfg file
+		config_save(&config);
+
 		resetrpc();
 	}
 
@@ -833,6 +854,10 @@ Emulator::cdrom_win_ioctl(char drive_letter)
 {
 	if(!config.cdromenabled) {
 		config.cdromenabled = 1;
+
+		// Save the settings to the rpc.cfg file
+		config_save(&config);
+
 		resetrpc();
 	}
 
@@ -848,6 +873,9 @@ void
 Emulator::mouse_hack()
 {
 	config.mousehackon ^= 1;
+
+	// Save the settings to the rpc.cfg file
+	config_save(&config);
 }
 
 /**
@@ -857,6 +885,9 @@ void
 Emulator::mouse_twobutton()
 {
 	config.mousetwobutton ^= 1;
+
+	// Save the settings to the rpc.cfg file
+	config_save(&config);
 }
 
 /**
@@ -896,6 +927,18 @@ Emulator::network_config_updated(NetworkType network_type, QString bridgename, Q
 	if (network_config_changed(network_type, bridge_name, ip_address)) {
 		this->reset();
 	}
+}
+
+/**
+ * User doesn't want to see the full screen help message again
+ */
+void
+Emulator::show_fullscreen_message_off()
+{
+	config.show_fullscreen_message = 0;
+
+	// Save the settings to the rpc.cfg file
+	config_save(&config);
 }
 
 #ifdef __cplusplus

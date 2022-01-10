@@ -70,6 +70,7 @@ signals:
 	void mouse_twobutton_signal();
 	void config_updated_signal(Config *new_config, Model new_model);
 	void network_config_updated_signal(NetworkType network_type, QString bridgename, QString ipaddress);
+	void show_fullscreen_message_off_signal();
 
 public slots:
 	void mainemuloop();
@@ -102,6 +103,7 @@ public slots:
 	void mouse_twobutton();
 	void config_updated(Config *new_config, Model new_model);
 	void network_config_updated(NetworkType network_type, QString bridgename, QString ipaddress);
+	void show_fullscreen_message_off();
 
 private:
 	QElapsedTimer elapsed_timer;

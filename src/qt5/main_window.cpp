@@ -392,6 +392,26 @@ MainWindow::~MainWindow()
 }
 
 /**
+ * Ask the user if they'd like to reset RPCEmu
+ *
+ * @param parent pointer to mainwindow, used to centre dialog over mainwindow
+ * @return code of which button pressed
+ */
+int
+MainWindow::reset_question(QWidget *parent)
+{
+	QMessageBox msgBox(parent);
+
+	msgBox.setWindowTitle("RPCEmu");
+	msgBox.setText("This will reset RPCEmu!\n\nOkay to continue?");
+	msgBox.setIcon(QMessageBox::Warning);
+	msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+	msgBox.setDefaultButton(QMessageBox::Cancel);
+
+	return msgBox.exec();
+}
+
+/**
  * Signal received about window gaining/losing focus, or minimising etc.
  *
  * @param state new application state
@@ -622,11 +642,7 @@ MainWindow::menu_screenshot()
 void
 MainWindow::menu_reset()
 {
-	QMessageBox msgBox;
-	msgBox.setText("This will reset RPCEmu!\nOkay to continue?");
-	msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-	msgBox.setDefaultButton(QMessageBox::Cancel);
-	int ret = msgBox.exec();
+	int ret = MainWindow::reset_question(this);
 
 	switch (ret) {
 	case QMessageBox::Ok:
@@ -691,7 +707,7 @@ MainWindow::menu_fullscreen()
 		// Change Windowed -> Full Screen
 
 		// Make sure people know how to exit full-screen
-		if (config.show_fullscreen_message) {
+		if (config_copy.show_fullscreen_message) {
 			QCheckBox *checkBox = new QCheckBox("Do not show this message again");
 
 			QMessageBox msg_box(QMessageBox::Information,
@@ -714,7 +730,8 @@ MainWindow::menu_fullscreen()
 
 			// If they checked the box don't show this message again
 			if (msg_box.checkBox()->isChecked()) {
-				config.show_fullscreen_message = 0;
+				emit this->emulator.show_fullscreen_message_off();
+				config_copy.show_fullscreen_message = 0;
 			}
 		}
 
@@ -745,11 +762,7 @@ MainWindow::menu_fullscreen()
 void
 MainWindow::menu_cpu_idle()
 {
-	QMessageBox msgBox;
-	msgBox.setText("This will reset RPCEmu!\nOkay to continue?");
-	msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-	msgBox.setDefaultButton(QMessageBox::Cancel);
-	int ret = msgBox.exec();
+	int ret = MainWindow::reset_question(this);
 
 	switch (ret) {
 	case QMessageBox::Ok:
@@ -772,11 +785,7 @@ void
 MainWindow::menu_cdrom_disabled()
 {
 	if (config_copy.cdromenabled) {
-		QMessageBox msgBox;
-		msgBox.setText("This will reset RPCEmu!\nOkay to continue?");
-		msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-		msgBox.setDefaultButton(QMessageBox::Cancel);
-		int ret = msgBox.exec();
+		int ret = MainWindow::reset_question(this);
 
 		switch (ret) {
 		case QMessageBox::Ok:
@@ -803,11 +812,7 @@ void
 MainWindow::menu_cdrom_empty()
 {
 	if (!config_copy.cdromenabled) {
-		QMessageBox msgBox;
-		msgBox.setText("This will reset RPCEmu!\nOkay to continue?");
-		msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-		msgBox.setDefaultButton(QMessageBox::Cancel);
-		int ret = msgBox.exec();
+		int ret = MainWindow::reset_question(this);
 
 		switch (ret) {
 		case QMessageBox::Ok:
@@ -841,11 +846,7 @@ MainWindow::menu_cdrom_iso()
 	/* fileName is NULL if user hit cancel */
 	if(fileName != NULL) {
 		if (!config_copy.cdromenabled) {
-			QMessageBox msgBox;
-			msgBox.setText("This will reset RPCEmu!\nOkay to continue?");
-			msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-			msgBox.setDefaultButton(QMessageBox::Cancel);
-			int ret = msgBox.exec();
+			int ret = MainWindow::reset_question(this);
 
 			switch (ret) {
 			case QMessageBox::Ok:
@@ -877,11 +878,7 @@ MainWindow::menu_cdrom_ioctl()
 {
 #if defined(Q_OS_LINUX)
 	if (!config_copy.cdromenabled) {
-		QMessageBox msgBox;
-		msgBox.setText("This will reset RPCEmu!\nOkay to continue?");
-		msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-		msgBox.setDefaultButton(QMessageBox::Cancel);
-		int ret = msgBox.exec();
+		int ret = MainWindow::reset_question(this);
 
 		switch (ret) {
 		case QMessageBox::Ok:
@@ -916,11 +913,7 @@ MainWindow::menu_cdrom_win_ioctl()
 	char drive_letter = action->data().toChar().toLatin1();
 
 	if (!config_copy.cdromenabled) {
-		QMessageBox msgBox;
-		msgBox.setText("This will reset RPCEmu!\nOkay to continue?");
-		msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-		msgBox.setDefaultButton(QMessageBox::Cancel);
-		int ret = msgBox.exec();
+		int ret = MainWindow::reset_question(this);
 
 		switch (ret) {
 		case QMessageBox::Ok:
