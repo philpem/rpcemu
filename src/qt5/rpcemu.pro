@@ -6,9 +6,14 @@ CONFIG += debug_and_release
 QT += core widgets gui multimedia
 INCLUDEPATH += ../
 
-# This ensures that using switch with enum requires every value to be handled
-QMAKE_CFLAGS += -Werror=switch
-QMAKE_CXXFLAGS += -Werror=switch
+# -Werror=switch
+#	Ensures that using switch with enum requires every value to be handled
+# -fno-common
+#	Common symbols across object files will produce a link error
+#	This is the default from GCC 10
+#
+QMAKE_CFLAGS   += -Werror=switch -fno-common
+QMAKE_CXXFLAGS += -Werror=switch -fno-common
 
 
 HEADERS =	../superio.h \
@@ -26,6 +31,10 @@ HEADERS =	../superio.h \
 		../vidc20.h \
 		../arm_common.h \
 		../arm.h \
+		../disc.h \
+		../disc_adf.h \
+		../disc_hfe.h \
+		../disc_mfm_common.h \
 		main_window.h \
 		configure_dialog.h \
 		about_dialog.h \
@@ -53,6 +62,10 @@ SOURCES =	../superio.c \
 		../rpc-machdep.c \
 		../arm_common.c \
 		../i8042.c \
+		../disc.c \
+		../disc_adf.c \
+		../disc_hfe.c \
+		../disc_mfm_common.c \
 		settings.cpp \
 		rpc-qt5.cpp \
 		main_window.cpp \
@@ -62,8 +75,12 @@ SOURCES =	../superio.c \
 
 # NAT Networking
 linux | win32 {
-	HEADERS +=	../network-nat.h
-	SOURCES += 	../network-nat.c
+	HEADERS +=	../network-nat.h \
+			nat_edit_dialog.h \
+			nat_list_dialog.h
+	SOURCES += 	../network-nat.c \
+			nat_edit_dialog.cpp \
+			nat_list_dialog.cpp
 
 	HEADERS += 	../slirp/bootp.h \
 			../slirp/cutils.h \
