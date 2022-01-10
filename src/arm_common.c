@@ -37,6 +37,8 @@
 #define SWI_OS_Byte		0x6
 #define SWI_OS_Word		0x7
 #define SWI_OS_Mouse		0x1c
+#define SWI_OS_ReadSysInfo	0x58
+#define SWI_OS_Reset		0x6a
 #define SWI_OS_CallASWI		0x6f
 #define SWI_OS_CallASWIR12	0x71
 
@@ -577,6 +579,19 @@ opSWI(uint32_t opcode)
 		swinum = arm.reg[10] & 0xdffff;
 	} else if (swinum == SWI_OS_CallASWIR12) {
 		swinum = arm.reg[12] & 0xdffff;
+	}
+
+	/* Intercept OS_Reset to check for turning off
+	   https://www.riscosopen.org/wiki/documentation/show/OS_Reset
+	*/
+	if (swinum == SWI_OS_Reset) {
+		if (arm.reg[0] == 0x46464F26) { /* "&OFF" */
+			exit(0);
+		}
+	} else if (swinum == SWI_OS_ReadSysInfo && arm.reg[0] == 8) {
+		arm.reg[0] = 0; /* Unknown hardware platform */
+		arm.reg[1] = 0x08; /* Software control over PSU supported */
+		return;
 	}
 
 	/* Intercept RISC OS Portable SWIs to enable RPCEmu to sleep when
